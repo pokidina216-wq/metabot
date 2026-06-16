@@ -1,24 +1,17 @@
 FROM python:3.12-slim
 
-# Системные зависимости
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libmagic1 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Зависимости
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir \
+    aiogram python-dotenv Pillow mutagen pypdf \
+    python-docx openpyxl python-pptx aiohttp aiohttp-socks
 
-# Код
-COPY . .
-
-# Директория для SQLite БД (persistent volume)
-RUN mkdir -p /data
+COPY bot_lite.py .
+COPY proxies.txt .
+COPY welcome.png .
 
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-
-CMD ["python", "bot3.py"]
+CMD ["python", "bot_lite.py"]

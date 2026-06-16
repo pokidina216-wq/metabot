@@ -1,5 +1,0 @@
-python-telegram-bot==21.10
-Pillow==11.1.0
-mutagen==1.47.0
-pypdf==5.1.0
-aiohttp>=3.9.0
