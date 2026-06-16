@@ -801,6 +801,15 @@ async def tginfo_query(message: Message, state: FSMContext) -> None:
         await state.set_state(TgInfoState.waiting)
 
 # ─── Запуск ──────────────────────────────────────────────────────────────────
+_dp: Dispatcher | None = None
+
+def _get_dp() -> Dispatcher:
+    global _dp
+    if _dp is None:
+        _dp = Dispatcher(storage=MemoryStorage())
+        _dp.include_router(router)
+    return _dp
+
 async def _start_bot(proxy_url: str | None) -> None:
     session = _make_session(proxy_url)
     bot = Bot(
@@ -808,8 +817,7 @@ async def _start_bot(proxy_url: str | None) -> None:
         session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(router)
+    dp = _get_dp()
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("🔮 Vexis запущен%s", f" через {proxy_url}" if proxy_url else " без прокси")
     await dp.start_polling(bot)
