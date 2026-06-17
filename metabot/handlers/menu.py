@@ -32,10 +32,9 @@ router = Router(name="menu")
 # ═══════════════════════════════════════════════════════════
 
 VEXIS_HOME = (
-    "━━━━━━━━━━━━━━━━━━━━━━\n"
-    "  🔮 <b>VEXIS</b>\n"
-    "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    "Выберите действие 👇"
+    "◈ <b>VEXIS</b>\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    "Выберите действие ⤵"
 )
 
 
@@ -55,14 +54,14 @@ async def go_home_inline(callback: CallbackQuery, **data) -> None:
 
 
 # ═══════════════════════════════════════════════════════════
-#  ПРОВЕРКА ДАННЫХ (OSINT) — Reply-кнопка → inline-меню в osint_handler
+#  ПРОВЕРКА ДАННЫХ (OSINT) — Reply-кнопка → inline-меню
 # ═══════════════════════════════════════════════════════════
 
 @router.message(F.text == "🔍 Проверка данных")
 async def menu_osint(message: Message) -> None:
     from metabot.handlers.osint_handler import osint_categories_kb
     text = (
-        "🔎 <b>OSINT — Центр инструментов</b>\n"
+        "◈ <b>OSINT — Центр инструментов</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Выберите категорию данных для проверки:"
     )
@@ -75,7 +74,7 @@ async def menu_osint(message: Message) -> None:
 
 @router.message(F.text == "🛠 Админ-панель")
 async def menu_admin(message: Message, session: AsyncSession, **data) -> None:
-    """Reply-кнопка «Админ-панель» → перенаправляем в admin_handler."""
+    """Reply-кнопка «Админ-панель» → admin_handler."""
     from metabot.handlers.admin_handler import _can_admin, _show_dashboard
     if not _can_admin(data):
         await message.answer("🚫 Доступ запрещён.")
@@ -90,19 +89,18 @@ async def menu_admin(message: Message, session: AsyncSession, **data) -> None:
 @router.message(F.text == "📂 Метаданные")
 async def menu_metadata(message: Message) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  📂 <b>АНАЛИЗ МЕТАДАННЫХ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Отправьте мне файл как <b>документ</b> 📎\n"
-        "и я мгновенно извлеку все метаданные.\n\n"
-        "<b>Поддерживаемые форматы:</b>\n"
-        "┣ 📷 Изображения — JPEG, PNG, TIFF, HEIC\n"
-        "┣ 🎬 Видео — MP4, AVI, MKV, MOV\n"
-        "┣ 🎵 Аудио — MP3, FLAC, WAV, OGG\n"
-        "┣ 📄 Документы — PDF, DOCX, XLSX, PPTX\n"
-        "┗ 📦 Архивы — ZIP, TAR, 7Z\n\n"
-        "⚠️ <i>Важно: отправляйте как «Файл», не как «Фото» —\n"
-        "иначе Telegram удалит все метаданные.</i>"
+        "◈ <b>АНАЛИЗ МЕТАДАННЫХ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Отправьте файл как <b>документ</b> 📎\n"
+        "и получите полный анализ метаданных.\n\n"
+        "<b>Форматы:</b>\n"
+        "  ▸ 📷 Изображения — JPEG, PNG, TIFF, HEIC\n"
+        "  ▸ 🎬 Видео — MP4, AVI, MKV, MOV\n"
+        "  ▸ 🎵 Аудио — MP3, FLAC, WAV, OGG\n"
+        "  ▸ 📄 Документы — PDF, DOCX, XLSX\n"
+        "  ▸ 📦 Архивы — ZIP, TAR, 7Z\n\n"
+        "⚠️ <i>Отправляйте как «Файл», не «Фото» —\n"
+        "иначе Telegram удалит метаданные.</i>"
     )
     await message.answer(text, reply_markup=metadata_waiting_kb(), parse_mode="HTML")
 
@@ -110,9 +108,8 @@ async def menu_metadata(message: Message) -> None:
 @router.callback_query(F.data == "menu:metadata")
 async def cb_menu_metadata(callback: CallbackQuery) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  📂 <b>АНАЛИЗ МЕТАДАННЫХ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "◈ <b>АНАЛИЗ МЕТАДАННЫХ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Отправьте файл как <b>документ</b> 📎\n\n"
         "⚠️ <i>Именно как «Файл», не как «Фото»!</i>"
     )
@@ -127,10 +124,9 @@ async def cb_menu_metadata(callback: CallbackQuery) -> None:
 @router.message(F.text == "🔤 Username Finder")
 async def menu_username(message: Message) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  🔤 <b>USERNAME FINDER</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Найдём свободные Telegram @username.\n\n"
+        "◈ <b>USERNAME FINDER</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Поиск свободных Telegram @username.\n\n"
         "<b>Шаг 1 из 3</b> — Выберите длину:"
     )
     await message.answer(text, reply_markup=username_length_kb(), parse_mode="HTML")
@@ -139,10 +135,9 @@ async def menu_username(message: Message) -> None:
 @router.callback_query(F.data == "menu:username")
 async def cb_menu_username(callback: CallbackQuery) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  🔤 <b>USERNAME FINDER</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Найдём свободные Telegram @username.\n\n"
+        "◈ <b>USERNAME FINDER</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Поиск свободных Telegram @username.\n\n"
         "<b>Шаг 1 из 3</b> — Выберите длину:"
     )
     await callback.message.edit_text(text, reply_markup=username_length_kb(), parse_mode="HTML")
@@ -174,16 +169,15 @@ async def _build_profile_text(db_user: User, session: AsyncSession) -> str:
     safe_uname = sanitize(db_user.username, 32) if db_user.username else "—"
 
     return (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  👤 <b>ПРОФИЛЬ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"┣ 🆔 <b>ID:</b> <code>{db_user.telegram_id}</code>\n"
-        f"┣ 📛 <b>Username:</b> @{safe_uname}\n"
-        f"┣ 📅 <b>Регистрация:</b> {db_user.created_at.strftime('%d.%m.%Y')}\n"
-        f"┣ 📊 <b>Тариф:</b> {sanitize(plan_name, 32)}\n"
-        f"┣ 📈 <b>Сегодня:</b> {db_user.daily_requests_used}/{daily_limit}\n"
-        f"┣ 📊 <b>Всего:</b> {db_user.total_requests} запросов\n"
-        f"┗ 🎁 <b>Бонусы:</b> {db_user.referral_bonus_balance}"
+        "◈ <b>ПРОФИЛЬ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  ▸ 🆔 <b>ID:</b> <code>{db_user.telegram_id}</code>\n"
+        f"  ▸ 📛 <b>Username:</b> @{safe_uname}\n"
+        f"  ▸ 📅 <b>Регистрация:</b> {db_user.created_at.strftime('%d.%m.%Y')}\n"
+        f"  ▸ 📊 <b>Тариф:</b> {sanitize(plan_name, 32)}\n"
+        f"  ▸ 📈 <b>Сегодня:</b> {db_user.daily_requests_used}/{daily_limit}\n"
+        f"  ▸ 📊 <b>Всего:</b> {db_user.total_requests} запросов\n"
+        f"  ▸ 🎁 <b>Бонусы:</b> {db_user.referral_bonus_balance}"
     )
 
 
@@ -214,26 +208,33 @@ async def cb_menu_subscription(callback: CallbackQuery, db_user: User, session: 
 
 async def _build_subscription_text(db_user: User, session: AsyncSession) -> str:
     from metabot.services.subscription_service import SubscriptionService
+    from metabot.configs import get_settings
+    settings = get_settings()
     sub_service = SubscriptionService(session)
     active_sub = await sub_service.get_active_sub(db_user.id)
 
     header = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  💎 <b>ПОДПИСКА</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "◈ <b>ПОДПИСКА</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
     )
 
     if active_sub:
+        emoji = {"premium": "💎", "vip": "👑"}.get(active_sub.plan.slug, "📦")
+        remaining = (active_sub.expires_at - active_sub.starts_at).days
         return header + (
             f"✅ <b>Активна</b>\n\n"
-            f"┣ 📦 <b>Тариф:</b> {active_sub.plan.name}\n"
-            f"┣ 📅 <b>До:</b> {active_sub.expires_at.strftime('%d.%m.%Y %H:%M')}\n"
-            f"┗ 📊 <b>Лимит:</b> {active_sub.plan.daily_request_limit} запросов/день"
+            f"  ▸ {emoji} <b>Тариф:</b> {active_sub.plan.name}\n"
+            f"  ▸ 📅 <b>До:</b> {active_sub.expires_at.strftime('%d.%m.%Y %H:%M')}\n"
+            f"  ▸ 📊 <b>Лимит:</b> {active_sub.plan.daily_request_limit} запросов/день"
         )
     return header + (
         "❌ <b>Нет активной подписки</b>\n\n"
-        "Текущий тариф: <b>Free</b> (5 запросов/день)\n\n"
-        "💎 Выберите «Тарифы» для обновления!"
+        "Текущий тариф: <b>Free</b> — 5 запросов/день\n\n"
+        "┌─────────────────────┐\n"
+        "│  💎 Premium — $6 / 30 дн.  │\n"
+        "│  👑 VIP — $15 / 90 дн.     │\n"
+        "└─────────────────────┘\n\n"
+        f"💬 Для покупки: @{settings.support_contact}"
     )
 
 
@@ -269,17 +270,16 @@ async def _build_referral_text(db_user: User, session: AsyncSession) -> str:
     stats = await ref_service.get_stats(db_user)
 
     return (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  👥 <b>РЕФЕРАЛЫ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "◈ <b>РЕФЕРАЛЫ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"🔗 <b>Ваша ссылка:</b>\n"
         f"<code>{stats.referral_link}</code>\n\n"
-        f"┣ 👤 <b>Приглашено:</b> {stats.total_referrals}\n"
-        f"┣ ✅ <b>Активировано:</b> {stats.activated}\n"
-        f"┗ 🎁 <b>Бонусов:</b> {stats.total_bonuses}\n\n"
-        f"<b>Как получать бонусы:</b>\n"
-        f"┣ +1 запрос — за каждую регистрацию\n"
-        f"┗ +5 запросов — за покупку подписки рефералом"
+        f"  ▸ 👤 <b>Приглашено:</b> {stats.total_referrals}\n"
+        f"  ▸ ✅ <b>Активировано:</b> {stats.activated}\n"
+        f"  ▸ 🎁 <b>Бонусов:</b> {stats.total_bonuses}\n\n"
+        f"<b>Награды:</b>\n"
+        f"  ▸ +1 запрос — за регистрацию\n"
+        f"  ▸ +5 запросов — за покупку подписки"
     )
 
 
@@ -289,35 +289,26 @@ async def _build_referral_text(db_user: User, session: AsyncSession) -> str:
 
 @router.message(F.text == "⚙️ Настройки")
 async def menu_settings(message: Message, db_user: User) -> None:
-    text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  ⚙️ <b>НАСТРОЙКИ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🔔 Уведомления: {'✅ Включены' if db_user.notifications_enabled else '❌ Выключены'}\n"
-        f"🌐 Язык: {db_user.language_code or 'Авто'}"
-    )
-    await message.answer(
-        text,
-        reply_markup=settings_kb(db_user.notifications_enabled),
-        parse_mode="HTML",
-    )
+    text = _settings_text(db_user)
+    await message.answer(text, reply_markup=settings_kb(db_user.notifications_enabled), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "menu:settings")
 async def cb_menu_settings(callback: CallbackQuery, db_user: User) -> None:
-    text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  ⚙️ <b>НАСТРОЙКИ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🔔 Уведомления: {'✅ Включены' if db_user.notifications_enabled else '❌ Выключены'}\n"
-        f"🌐 Язык: {db_user.language_code or 'Авто'}"
-    )
+    text = _settings_text(db_user)
     await callback.message.edit_text(
-        text,
-        reply_markup=settings_kb(db_user.notifications_enabled),
-        parse_mode="HTML",
+        text, reply_markup=settings_kb(db_user.notifications_enabled), parse_mode="HTML",
     )
     await callback.answer()
+
+
+def _settings_text(db_user: User) -> str:
+    return (
+        "◈ <b>НАСТРОЙКИ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  ▸ 🔔 Уведомления: {'✅ Вкл' if db_user.notifications_enabled else '❌ Выкл'}\n"
+        f"  ▸ 🌐 Язык: {db_user.language_code or 'Авто'}"
+    )
 
 
 @router.callback_query(F.data == "settings:toggle_notif")
@@ -329,13 +320,8 @@ async def cb_toggle_notifications(
     new_state = not db_user.notifications_enabled
     await user_service.update_notifications(db_user, new_state)
 
-    emoji = "✅ Включены" if new_state else "❌ Выключены"
     await callback.message.edit_text(
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"  ⚙️ <b>НАСТРОЙКИ</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🔔 Уведомления: {emoji}\n"
-        f"🌐 Язык: {db_user.language_code or 'Авто'}",
+        _settings_text(db_user),
         reply_markup=settings_kb(new_state),
         parse_mode="HTML",
     )
@@ -363,7 +349,7 @@ async def cb_set_language(
 
     lang_label = {"ru": "🇷🇺 Русский", "en": "🇬🇧 English"}.get(lang, lang)
     await callback.message.edit_text(
-        f"✅ Язык изменён на: {lang_label}",
+        f"✅ Язык изменён: {lang_label}",
         reply_markup=settings_kb(db_user.notifications_enabled),
         parse_mode="HTML",
     )
@@ -377,9 +363,8 @@ async def cb_set_language(
 @router.message(F.text == "❓ Помощь")
 async def menu_help(message: Message) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  ❓ <b>ПОМОЩЬ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "◈ <b>ПОМОЩЬ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Выберите тему:"
     )
     await message.answer(text, reply_markup=help_kb(), parse_mode="HTML")
@@ -388,9 +373,8 @@ async def menu_help(message: Message) -> None:
 @router.callback_query(F.data == "menu:help")
 async def cb_menu_help(callback: CallbackQuery) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  ❓ <b>ПОМОЩЬ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "◈ <b>ПОМОЩЬ</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Выберите тему:"
     )
     await callback.message.edit_text(text, reply_markup=help_kb(), parse_mode="HTML")
@@ -401,13 +385,11 @@ async def cb_menu_help(callback: CallbackQuery) -> None:
 async def cb_help_files(callback: CallbackQuery) -> None:
     text = (
         "📂 <b>Как отправлять файлы</b>\n\n"
-        "1️⃣ Нажмите 📎 (скрепка) в поле ввода\n"
-        "2️⃣ Выберите <b>«Файл»</b>, а не «Фото»\n"
+        "1️⃣ Нажмите 📎 в поле ввода\n"
+        "2️⃣ Выберите <b>«Файл»</b>, не «Фото»\n"
         "3️⃣ Выберите файл и отправьте\n\n"
-        "⚠️ Если отправить фото через «Фото», Telegram\n"
-        "удалит все метаданные (EXIF, GPS и т.д.).\n\n"
-        "✅ Только отправка как «Файл»/«Документ»\n"
-        "сохраняет оригинальные метаданные."
+        "⚠️ При отправке как «Фото» Telegram\n"
+        "удалит все метаданные (EXIF, GPS и т.д.)."
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
     await callback.answer()
@@ -420,12 +402,12 @@ async def cb_help_osint(callback: CallbackQuery) -> None:
         "OSINT (Open Source Intelligence) — поиск\n"
         "информации по открытым источникам.\n\n"
         "Vexis ищет по:\n"
-        "┣ 📱 Номерам телефонов\n"
-        "┣ 📧 Email-адресам\n"
-        "┣ 🌐 Доменам и IP\n"
-        "┣ 🎭 Никнеймам и ФИО\n"
-        "┗ 📸 Фотографиям лиц\n\n"
-        "Мы используем только легальные API\n"
+        "  ▸ 📱 Номерам телефонов\n"
+        "  ▸ 📧 Email-адресам\n"
+        "  ▸ 🌐 Доменам и IP\n"
+        "  ▸ 🎭 Никнеймам и ФИО\n"
+        "  ▸ 📸 Фотографиям лиц\n\n"
+        "Используются только легальные API\n"
         "и открытые базы данных."
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
@@ -439,13 +421,12 @@ async def cb_help_subs(callback: CallbackQuery) -> None:
     text = (
         "💎 <b>О подписках</b>\n\n"
         "🆓 <b>Free</b> — 5 запросов/день\n"
-        "💎 <b>Premium</b> — 50 запросов/день + OSINT\n"
-        "👑 <b>VIP</b> — 200 запросов/день + все инструменты\n\n"
+        "💎 <b>Premium</b> — 50 запросов/день — $6 / 30 дн.\n"
+        "👑 <b>VIP</b> — 200 запросов/день — $15 / 90 дн.\n\n"
         "<b>Как оформить:</b>\n"
-        "1️⃣ Откройте «💎 Подписка» → «📋 Тарифы»\n"
-        "2️⃣ Выберите план → «📨 Оставить заявку»\n"
-        "3️⃣ Владелец рассмотрит и активирует подписку\n\n"
-        f"По вопросам оплаты: @{settings.support_contact}"
+        f"  ▸ Напишите @{settings.support_contact} в Telegram\n"
+        "  ▸ Или используйте промокод в разделе «💎 Подписка»\n\n"
+        f"По вопросам: @{settings.support_contact}"
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
     await callback.answer()
@@ -458,8 +439,8 @@ async def cb_help_referrals(callback: CallbackQuery) -> None:
         "1️⃣ Скопируйте ссылку в разделе «Рефералы»\n"
         "2️⃣ Поделитесь с друзьями\n"
         "3️⃣ Получайте бонусы:\n\n"
-        "┣ <b>+1 запрос</b> — за регистрацию друга\n"
-        "┗ <b>+5 запросов</b> — за покупку подписки"
+        "  ▸ <b>+1 запрос</b> — за регистрацию друга\n"
+        "  ▸ <b>+5 запросов</b> — за покупку подписки"
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
     await callback.answer()
@@ -471,8 +452,7 @@ async def cb_help_support(callback: CallbackQuery) -> None:
     settings = get_settings()
     text = (
         "💬 <b>Поддержка</b>\n\n"
-        "Если у вас есть вопросы или проблемы,\n"
-        "свяжитесь с нами:\n\n"
+        "По любым вопросам:\n\n"
         f"📩 @{settings.support_contact}\n\n"
         "🔒 Ваша безопасность — наш приоритет."
     )
@@ -509,7 +489,7 @@ async def cb_copy_ref_link(callback: CallbackQuery, db_user: User, session: Asyn
     stats = await ref_service.get_stats(db_user)
     await callback.message.answer(
         f"<code>{stats.referral_link}</code>\n\n"
-        f"👆 Нажмите на ссылку, чтобы скопировать",
+        f"👆 Нажмите, чтобы скопировать",
         parse_mode="HTML",
     )
     await callback.answer("Ссылка ниже 👇")
@@ -517,9 +497,9 @@ async def cb_copy_ref_link(callback: CallbackQuery, db_user: User, session: Asyn
 
 @router.callback_query(F.data.startswith("copy:"))
 async def cb_copy_generic(callback: CallbackQuery) -> None:
-    """Копирование: повторная отправка текста как <code> для лёгкого копирования."""
-    original = callback.message.text or callback.message.html_text or ""
+    """Копирование текста."""
     import re
+    original = callback.message.text or callback.message.html_text or ""
     clean = re.sub(r"<[^>]+>", "", original)
     if len(clean) > 4000:
         clean = clean[:4000]

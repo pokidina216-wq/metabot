@@ -165,55 +165,19 @@ def profile_kb() -> InlineKeyboardMarkup:
 # ═══════════════════════════════════════════════════════════
 
 def subscription_kb(has_active: bool = False) -> InlineKeyboardMarkup:
+    from metabot.configs import get_settings
+    settings = get_settings()
     b = InlineKeyboardBuilder()
-    b.button(text="📋 Тарифы",              callback_data="sub:plans")
+    b.button(text="📋 Тарифы и цены", callback_data="sub:plans")
+    b.button(text="🎟 Ввести промокод", callback_data="promo:enter")
+    b.button(
+        text=f"💬 Написать @{settings.support_contact}",
+        url=f"https://t.me/{settings.support_contact}",
+    )
     if has_active:
-        b.button(text="❌ Отменить подписку", callback_data="sub:cancel")
-    b.button(text="📜 История платежей",      callback_data="sub:history")
-    b.button(text="← Назад",                 callback_data="nav:home")
-    b.adjust(1)
-    return b.as_markup()
-
-
-def plan_selection_kb(plans: Sequence[Plan]) -> InlineKeyboardMarkup:
-    b = InlineKeyboardBuilder()
-    for plan in plans:
-        emoji = {"free": "🆓", "premium": "💎", "vip": "👑"}.get(plan.slug, "📦")
-        label = f"{emoji} {plan.name} — ${plan.price_usd}/{plan.duration_days}д"
-        b.button(text=label, callback_data=f"buy:{plan.slug}")
-    b.button(text="← Назад", callback_data="sub:back")
+        b.button(text="📜 История платежей", callback_data="sub:history")
     b.button(text="🏠 На главную", callback_data="nav:home")
     b.adjust(1)
-    return b.as_markup()
-
-
-def payment_method_kb(plan_slug: str, enable_stars: bool = True) -> InlineKeyboardMarkup:
-    b = InlineKeyboardBuilder()
-    if enable_stars:
-        b.button(text="⭐ Telegram Stars", callback_data=f"pay:stars:{plan_slug}")
-    b.button(text="💳 Банковская карта", callback_data=f"pay:provider:{plan_slug}")
-    b.button(text="← Назад", callback_data="sub:plans")
-    b.button(text="🏠 На главную", callback_data="nav:home")
-    b.adjust(1)
-    return b.as_markup()
-
-
-def request_subscription_kb(plan_slug: str) -> InlineKeyboardMarkup:
-    """Кнопки оформления заявки на подписку (ручная монетизация)."""
-    b = InlineKeyboardBuilder()
-    b.button(text="📨 Оставить заявку", callback_data=f"req:create:{plan_slug}")
-    b.button(text="← Назад", callback_data="sub:plans")
-    b.button(text="🏠 На главную", callback_data="nav:home")
-    b.adjust(1)
-    return b.as_markup()
-
-
-def owner_request_decision_kb(request_id: int) -> InlineKeyboardMarkup:
-    """Кнопки решения Owner по заявке."""
-    b = InlineKeyboardBuilder()
-    b.button(text="✅ Одобрить", callback_data=f"req:approve:{request_id}")
-    b.button(text="❌ Отклонить", callback_data=f"req:reject:{request_id}")
-    b.adjust(2)
     return b.as_markup()
 
 

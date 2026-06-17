@@ -88,6 +88,10 @@ class AdminStates(StatesGroup):
     add_source_type = State()
     add_source_category = State()
     add_source_config = State()
+    promo_code = State()
+    promo_days = State()
+    promo_plan = State()
+    promo_max_uses = State()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -107,6 +111,7 @@ def _admin_dashboard_kb():
         ("🚫 Бан",                  "admin:ban"),
         ("✅ Разбан",               "admin:unban"),
         ("📢 Рассылка",            "admin:broadcast"),
+        ("🎟 Промокоды",           "admin:promos"),
         ("🔧 Источники OSINT",     "admin:osint_sources"),
         ("⚙️ Тарифы",              "admin:plans"),
         ("📋 Логи",                 "admin:logs"),
@@ -114,7 +119,7 @@ def _admin_dashboard_kb():
     for text, cb in buttons:
         b.button(text=text, callback_data=cb)
     b.button(text="🏠 На главную", callback_data="nav:home")
-    b.adjust(2, 2, 2, 2, 2, 1, 1)
+    b.adjust(2, 2, 2, 2, 2, 1, 1, 1)
     return b.as_markup()
 
 
@@ -991,6 +996,309 @@ async def cb_admin_plans(callback: CallbackQuery, session: AsyncSession, **data)
         "\n".join(lines), reply_markup=b.as_markup(), parse_mode="HTML"
     )
     await callback.answer()
+
+
+# ═══════════════════════════════════════════════════════════
+#  ПРОМОКОДЫ
+# ═══════════════════════════════════════════════════════════
+
+@router.callback_query(F.data == "admin:promos")
+async def cb_admin_promos(callback: CallbackQuery, session: AsyncSession, **data) -> None:
+    """Список активных промокодов."""
+    if not _can_admin(data):
+        await callback.answer("🚫", show_alert=True)
+        return
+
+    sub_service = SubscriptionService(session)
+    promos = await sub_service.list_promos(limit=20)
+
+    lines = [
+        "🎟 <b>Промокоды</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━\n",
+    ]
+
+    if promos:
+        for p in promos:
+            plan_name = p.plan.name if p.plan else "?"
+            uses = f"{p.used_count}/{p.max_uses}" if p.max_uses > 0 else f"{p.used_count}/∞"
+            lines.append(
+                f"  ▸ <code>{p.code}</code> — {plan_name} / {p.duration_days}д / {uses}"
+            )
+    else:
+        lines.append("  Нет активных промокодов.")
+
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    b = InlineKeyboardBuilder()
+    b.button(text="➕ Создать промокод", callback_data="admin:promo_create")
+    if promos:
+        b.button(text="🗑 Удалить промокод", callback_data="admin:promo_delete_list")
+    b.button(text="← Назад", callback_data="admin:menu")
+    b.adjust(1)
+
+    await callback.message.edit_text(
+        "\n".join(lines), reply_markup=b.as_markup(), parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin:promo_create")
+async def cb_promo_create_start(callback: CallbackQuery, state: FSMContext, **data) -> None:
+    """Шаг 1: ввод кода промокода."""
+    if not _can_admin(data):
+        await callback.answer("🚫", show_alert=True)
+        return
+
+    await state.set_state(AdminStates.promo_code)
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    b = InlineKeyboardBuilder()
+    b.button(text="❌ Отмена", callback_data="admin:promos")
+    b.adjust(1)
+
+    await callback.message.edit_text(
+        "🎟 <b>Создание промокода — Шаг 1/3</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Введите код промокода:\n\n"
+        "<i>Пример: <code>VEXIS2026</code></i>\n"
+        "<i>(до 32 символов, без пробелов)</i>",
+        reply_markup=b.as_markup(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(AdminStates.promo_code)
+async def process_promo_code_input(message: Message, state: FSMContext, **data) -> None:
+    """Получен код → запрос дней."""
+    if not _can_admin(data):
+        await state.clear()
+        return
+
+    code = (message.text or "").strip().upper()
+    if not code or len(code) > 32 or " " in code:
+        await message.answer(
+            "⚠️ Код должен быть 1–32 символов без пробелов. Попробуйте ещё:"
+        )
+        return
+
+    await state.update_data(promo_code_val=code)
+    await state.set_state(AdminStates.promo_days)
+
+    await message.answer(
+        f"🎟 <b>Код:</b> <code>{code}</code>\n\n"
+        "<b>Шаг 2/3</b> — Введите количество дней подписки:\n\n"
+        "<i>Пример: <code>30</code></i>",
+        parse_mode="HTML",
+    )
+
+
+@router.message(AdminStates.promo_days)
+async def process_promo_days_input(message: Message, state: FSMContext, session: AsyncSession, **data) -> None:
+    """Получены дни → выбор плана."""
+    if not _can_admin(data):
+        await state.clear()
+        return
+
+    try:
+        days = int((message.text or "").strip())
+        if days < 1 or days > 3650:
+            raise ValueError
+    except ValueError:
+        await message.answer("⚠️ Введите число от 1 до 3650:")
+        return
+
+    await state.update_data(promo_days_val=days)
+    await state.set_state(AdminStates.promo_plan)
+
+    # Показать планы для выбора
+    sub_service = SubscriptionService(session)
+    plans = await sub_service.get_plans()
+
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    b = InlineKeyboardBuilder()
+    for p in plans:
+        if p.slug == "free":
+            continue
+        emoji = {"premium": "💎", "vip": "👑"}.get(p.slug, "📦")
+        b.button(text=f"{emoji} {p.name}", callback_data=f"admin:promo_plan:{p.id}")
+    b.button(text="❌ Отмена", callback_data="admin:promos")
+    b.adjust(1)
+
+    fsm = await state.get_data()
+    await message.answer(
+        f"🎟 <b>Код:</b> <code>{fsm['promo_code_val']}</code>\n"
+        f"📅 <b>Дней:</b> {days}\n\n"
+        "<b>Шаг 3/3</b> — Выберите тариф:",
+        reply_markup=b.as_markup(),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data.startswith("admin:promo_plan:"))
+async def cb_promo_plan_selected(
+    callback: CallbackQuery, state: FSMContext, session: AsyncSession, **data
+) -> None:
+    """План выбран → запрос макс. использований."""
+    if not _can_admin(data):
+        await callback.answer("🚫", show_alert=True)
+        return
+
+    plan_id = int(callback.data.split(":", 2)[2])
+    await state.update_data(promo_plan_id=plan_id)
+    await state.set_state(AdminStates.promo_max_uses)
+
+    fsm = await state.get_data()
+    await callback.message.edit_text(
+        f"🎟 <b>Код:</b> <code>{fsm['promo_code_val']}</code>\n"
+        f"📅 <b>Дней:</b> {fsm['promo_days_val']}\n\n"
+        "Сколько раз можно использовать?\n\n"
+        "<i><code>1</code> — одноразовый</i>\n"
+        "<i><code>10</code> — до 10 раз</i>\n"
+        "<i><code>0</code> — безлимитный</i>",
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(AdminStates.promo_max_uses)
+async def process_promo_max_uses(
+    message: Message, state: FSMContext, session: AsyncSession, **data
+) -> None:
+    """Макс. использования получены → создание промокода."""
+    if not _can_admin(data):
+        await state.clear()
+        return
+
+    try:
+        max_uses = int((message.text or "").strip())
+        if max_uses < 0 or max_uses > 100000:
+            raise ValueError
+    except ValueError:
+        await message.answer("⚠️ Введите число от 0 до 100000:")
+        return
+
+    fsm = await state.get_data()
+    await state.clear()
+
+    code = fsm["promo_code_val"]
+    days = fsm["promo_days_val"]
+    plan_id = fsm["promo_plan_id"]
+    actor_tg = _actor_tg_id(data) or 0
+
+    sub_service = SubscriptionService(session)
+
+    # Проверить дубликат
+    from metabot.repositories.promo_repo import PromoCodeRepository
+    promo_repo = PromoCodeRepository(session)
+    existing = await promo_repo.get_by_code(code)
+    if existing:
+        await message.answer(
+            f"⚠️ Промокод <code>{code}</code> уже существует!",
+            parse_mode="HTML",
+        )
+        return
+
+    try:
+        promo = await sub_service.create_promo(
+            code=code,
+            plan_id=plan_id,
+            duration_days=days,
+            max_uses=max_uses,
+            created_by=actor_tg,
+        )
+    except Exception as e:
+        logger.error("Failed to create promo: %s", e)
+        await message.answer("❌ Ошибка создания промокода.")
+        return
+
+    plan_name = promo.plan.name if promo.plan else "?"
+    uses_label = str(max_uses) if max_uses > 0 else "∞"
+
+    # Аудит
+    await SecurityAuditService(session).record(
+        action="promo_created",
+        actor_tg_id=actor_tg,
+        actor_role="owner",
+        target_type="promo_code",
+        target_id=str(promo.id),
+        after={"code": code, "plan": plan_name, "days": days, "max_uses": max_uses},
+        note=f"code={code}",
+    )
+
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    b = InlineKeyboardBuilder()
+    b.button(text="🎟 К промокодам", callback_data="admin:promos")
+    b.button(text="➕ Ещё один", callback_data="admin:promo_create")
+    b.adjust(2)
+
+    await message.answer(
+        "✅ <b>Промокод создан!</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  ▸ 🎟 <b>Код:</b> <code>{code}</code>\n"
+        f"  ▸ 📦 <b>Тариф:</b> {plan_name}\n"
+        f"  ▸ 📅 <b>Дней:</b> {days}\n"
+        f"  ▸ 🔢 <b>Использований:</b> {uses_label}",
+        reply_markup=b.as_markup(),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "admin:promo_delete_list")
+async def cb_promo_delete_list(callback: CallbackQuery, session: AsyncSession, **data) -> None:
+    """Список промокодов для удаления."""
+    if not _can_admin(data):
+        await callback.answer("🚫", show_alert=True)
+        return
+
+    sub_service = SubscriptionService(session)
+    promos = await sub_service.list_promos(limit=20)
+
+    if not promos:
+        await callback.answer("Нет промокодов", show_alert=True)
+        return
+
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    b = InlineKeyboardBuilder()
+    for p in promos:
+        b.button(text=f"🗑 {p.code}", callback_data=f"admin:promo_del:{p.id}")
+    b.button(text="← Назад", callback_data="admin:promos")
+    b.adjust(1)
+
+    await callback.message.edit_text(
+        "🗑 <b>Удаление промокода</b>\n\n"
+        "Выберите промокод для деактивации:",
+        reply_markup=b.as_markup(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:promo_del:"))
+async def cb_promo_delete(callback: CallbackQuery, session: AsyncSession, **data) -> None:
+    """Удалить (деактивировать) конкретный промокод."""
+    if not _can_admin(data):
+        await callback.answer("🚫", show_alert=True)
+        return
+
+    promo_id = int(callback.data.split(":", 2)[2])
+    sub_service = SubscriptionService(session)
+    success = await sub_service.delete_promo(promo_id)
+
+    if success:
+        actor_tg = _actor_tg_id(data) or 0
+        await SecurityAuditService(session).record(
+            action="promo_deleted",
+            actor_tg_id=actor_tg,
+            actor_role="owner",
+            target_type="promo_code",
+            target_id=str(promo_id),
+            note="deactivated",
+        )
+        await callback.answer("✅ Промокод деактивирован", show_alert=True)
+    else:
+        await callback.answer("❌ Промокод не найден", show_alert=True)
+
+    # Обновить список
+    await cb_admin_promos(callback, session, **data)
 
 
 # ═══════════════════════════════════════════════════════════

@@ -18,6 +18,8 @@ from metabot.repositories.subscription_repo import (
     PlanRepository, SubscriptionRepository, SubscriptionRequestRepository,
 )
 from metabot.repositories.payment_repo import PaymentRepository
+from metabot.repositories.promo_repo import PromoCodeRepository
+from metabot.models.promo_code import PromoCode
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,7 @@ class SubscriptionService:
         self.sub_repo = SubscriptionRepository(session)
         self.pay_repo = PaymentRepository(session)
         self.req_repo = SubscriptionRequestRepository(session)
+        self.promo_repo = PromoCodeRepository(session)
 
     async def get_plans(self) -> Sequence[Plan]:
         return await self.plan_repo.get_active_plans()
@@ -189,3 +192,93 @@ class SubscriptionService:
         if count:
             logger.info("Deactivated %d expired subscriptions", count)
         return count
+
+    # ── Промокоды ──────────────────────────────────────────
+
+    async def activate_promo(
+        self, user: User, code: str
+    ) -> tuple[str, Subscription | None]:
+        """Активировать промокод.
+
+        Returns (outcome, subscription):
+            "activated" — подписка создана
+            "not_found" — код не найден / неактивен / истёк
+            "exhausted" — лимит использований исчерпан
+        """
+        promo = await self.promo_repo.get_active_by_code(code)
+        if not promo:
+            return "not_found", None
+
+        plan = await self.session.get(Plan, promo.plan_id)
+        if not plan:
+            return "not_found", None
+
+        # Создаём подписку с кастомной длительностью из промокода
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(days=promo.duration_days)
+
+        # Деактивировать старую подписку, если есть
+        old_sub = await self.sub_repo.get_active_subscription(user.id)
+        if old_sub:
+            old_sub.is_active = False
+            if old_sub.expires_at > now:
+                remaining = old_sub.expires_at - now
+                expires_at += remaining
+
+        sub = await self.sub_repo.create(
+            user_id=user.id,
+            plan_id=plan.id,
+            starts_at=now,
+            expires_at=expires_at,
+            is_active=True,
+        )
+
+        # Запись о платеже (бесплатный — промокод)
+        await self.pay_repo.create(
+            user_id=user.id,
+            plan_id=plan.id,
+            subscription_id=sub.id,
+            amount=0,
+            currency="USD",
+            payment_method="promo",
+            provider_payment_id=f"promo:{promo.code}",
+            status=PaymentStatus.COMPLETED,
+        )
+
+        # Увеличить счётчик использований
+        await self.promo_repo.increment_usage(promo)
+
+        logger.info(
+            "Promo activated: user=%d code=%s plan=%s days=%d until=%s",
+            user.id, promo.code, plan.slug, promo.duration_days,
+            expires_at.isoformat(),
+        )
+        return "activated", sub
+
+    async def create_promo(
+        self,
+        code: str,
+        plan_id: int,
+        duration_days: int,
+        max_uses: int,
+        created_by: int,
+    ) -> PromoCode:
+        """Создать промокод (Owner)."""
+        promo = await self.promo_repo.create(
+            code=code.upper().strip(),
+            plan_id=plan_id,
+            duration_days=duration_days,
+            max_uses=max_uses,
+            created_by=created_by,
+        )
+        logger.info("Promo created: code=%s plan_id=%d days=%d by=%d",
+                     promo.code, plan_id, duration_days, created_by)
+        return promo
+
+    async def list_promos(self, limit: int = 50) -> list:
+        """Список активных промокодов."""
+        return list(await self.promo_repo.list_active(limit))
+
+    async def delete_promo(self, promo_id: int) -> bool:
+        """Деактивировать промокод."""
+        return await self.promo_repo.deactivate(promo_id)

@@ -16,6 +16,7 @@ from .request_log import RequestLog
 from .analytics import AnalyticsEvent
 from .system_setting import SystemSetting
 from .cache_entry import CacheEntry
+from .promo_code import PromoCode
 
 __all__ = [
     "Base",
@@ -41,4 +42,5 @@ __all__ = [
     "AnalyticsEvent",
     "SystemSetting",
     "CacheEntry",
+    "PromoCode",
 ]
