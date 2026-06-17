@@ -1,7 +1,7 @@
 """
 Vexis — обработка Reply-кнопок главного меню + inline-навигация.
 Все разделы: проверка данных, метаданные, username, профиль,
-подписка, рефералы, настройки, помощь.
+подписка, рефералы, настройки, помощь, админ-панель.
 """
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from metabot.keyboards import (
     main_menu_kb,
     metadata_waiting_kb,
-    osint_menu_kb,
     username_length_kb,
     profile_kb,
     subscription_kb,
@@ -41,14 +40,16 @@ VEXIS_HOME = (
 
 
 @router.message(F.text.in_({"🏠 На главную", "🏠 Главное меню", "/menu"}))
-async def go_home_reply(message: Message) -> None:
-    await message.answer(VEXIS_HOME, reply_markup=main_menu_kb(), parse_mode="HTML")
+async def go_home_reply(message: Message, **data) -> None:
+    owner = data.get("is_owner", False)
+    await message.answer(VEXIS_HOME, reply_markup=main_menu_kb(is_owner=owner), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "nav:home")
-async def go_home_inline(callback: CallbackQuery) -> None:
+async def go_home_inline(callback: CallbackQuery, **data) -> None:
+    owner = data.get("is_owner", False)
     await callback.message.answer(
-        VEXIS_HOME, reply_markup=main_menu_kb(), parse_mode="HTML"
+        VEXIS_HOME, reply_markup=main_menu_kb(is_owner=owner), parse_mode="HTML"
     )
     await callback.answer()
 
@@ -59,17 +60,27 @@ async def go_home_inline(callback: CallbackQuery) -> None:
 
 @router.message(F.text == "🔍 Проверка данных")
 async def menu_osint(message: Message) -> None:
+    from metabot.handlers.osint_handler import osint_categories_kb
     text = (
         "🔎 <b>OSINT — Центр инструментов</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Выберите тип проверки.\n"
-        "Встроенные инструменты дадут результат прямо здесь.\n"
-        "Внешние источники — дополнительно по ссылкам."
+        "Выберите категорию данных для проверки:"
     )
-    await message.answer(text, reply_markup=osint_menu_kb(), parse_mode="HTML")
+    await message.answer(text, reply_markup=osint_categories_kb(), parse_mode="HTML")
 
-# ВАЖНО: callback_query «menu:osint» обрабатывается в osint_handler.py
-# (единая точка — без дублирования)
+
+# ═══════════════════════════════════════════════════════════
+#  АДМИН-ПАНЕЛЬ (Reply-кнопка)
+# ═══════════════════════════════════════════════════════════
+
+@router.message(F.text == "🛠 Админ-панель")
+async def menu_admin(message: Message, session: AsyncSession, **data) -> None:
+    """Reply-кнопка «Админ-панель» → перенаправляем в admin_handler."""
+    from metabot.handlers.admin_handler import _can_admin, _show_dashboard
+    if not _can_admin(data):
+        await message.answer("🚫 Доступ запрещён.")
+        return
+    await _show_dashboard(message, session, edit=False)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -507,9 +518,7 @@ async def cb_copy_ref_link(callback: CallbackQuery, db_user: User, session: Asyn
 @router.callback_query(F.data.startswith("copy:"))
 async def cb_copy_generic(callback: CallbackQuery) -> None:
     """Копирование: повторная отправка текста как <code> для лёгкого копирования."""
-    # Отправляем последний текст сообщения заново с тегом <code>
     original = callback.message.text or callback.message.html_text or ""
-    # Убираем HTML теги для чистого текста
     import re
     clean = re.sub(r"<[^>]+>", "", original)
     if len(clean) > 4000:
