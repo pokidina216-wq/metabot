@@ -240,7 +240,7 @@ async def cb_select_type_and_search(
     except Exception as e:
         logger.exception("Username search error: %s", e)
         await callback.message.edit_text(
-            f"❌ Ошибка поиска: {str(e)[:200]}",
+            "❌ Ошибка поиска. Попробуйте позже.",
             reply_markup=username_result_kb(),
         )
 
