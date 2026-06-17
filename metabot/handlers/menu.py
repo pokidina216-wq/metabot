@@ -53,30 +53,22 @@ async def go_home_inline(callback: CallbackQuery) -> None:
 
 
 # ═══════════════════════════════════════════════════════════
-#  ПРОВЕРКА ДАННЫХ (OSINT)
+#  ПРОВЕРКА ДАННЫХ (OSINT) — Reply-кнопка → inline-меню в osint_handler
 # ═══════════════════════════════════════════════════════════
 
 @router.message(F.text == "🔍 Проверка данных")
 async def menu_osint(message: Message) -> None:
     text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  🔍 <b>ПРОВЕРКА ДАННЫХ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Выберите тип проверки:"
+        "🔎 <b>OSINT — Центр инструментов</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Выберите тип проверки.\n"
+        "Встроенные инструменты дадут результат прямо здесь.\n"
+        "Внешние источники — дополнительно по ссылкам."
     )
     await message.answer(text, reply_markup=osint_menu_kb(), parse_mode="HTML")
 
-
-@router.callback_query(F.data == "menu:osint")
-async def cb_menu_osint(callback: CallbackQuery) -> None:
-    text = (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "  🔍 <b>ПРОВЕРКА ДАННЫХ</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Выберите тип проверки:"
-    )
-    await callback.message.edit_text(text, reply_markup=osint_menu_kb(), parse_mode="HTML")
-    await callback.answer()
+# ВАЖНО: callback_query «menu:osint» обрабатывается в osint_handler.py
+# (единая точка — без дублирования)
 
 
 # ═══════════════════════════════════════════════════════════
