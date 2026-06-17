@@ -36,9 +36,11 @@ async def cmd_start(
     session: AsyncSession,
     db_user: User,
     is_new_user: bool,
+    **data,
 ) -> None:
     """Обработчик /start с баннером и deep link (рефералы)."""
     settings = get_settings()
+    owner = data.get("is_owner", False)
 
     # ── Реферальная ссылка ───────────────────────────────
     if is_new_user and command.args and command.args.startswith("ref_"):
@@ -73,6 +75,8 @@ async def cmd_start(
             "Выберите действие ниже 👇"
         )
 
+    kb = main_menu_kb(is_owner=owner)
+
     # ── Отправка с фото ──────────────────────────────────
     if _WELCOME_IMG.exists():
         try:
@@ -80,7 +84,7 @@ async def cmd_start(
             await message.answer_photo(
                 photo=photo,
                 caption=caption,
-                reply_markup=main_menu_kb(),
+                reply_markup=kb,
                 parse_mode="HTML",
             )
             return
@@ -88,4 +92,4 @@ async def cmd_start(
             logger.warning("Failed to send welcome photo: %s", e)
 
     # Fallback: без фото
-    await message.answer(caption, reply_markup=main_menu_kb(), parse_mode="HTML")
+    await message.answer(caption, reply_markup=kb, parse_mode="HTML")
