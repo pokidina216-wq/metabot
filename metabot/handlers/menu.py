@@ -23,6 +23,7 @@ from metabot.keyboards import (
     help_back_kb,
 )
 from metabot.models.user import User
+from metabot.utils.validators import sanitize
 
 router = Router(name="menu")
 
@@ -159,15 +160,16 @@ async def _build_profile_text(db_user: User, session: AsyncSession) -> str:
     user_service = UserService(session)
     plan_name = await user_service.get_user_plan_name(db_user)
     daily_limit = await user_service.get_daily_limit(db_user)
+    safe_uname = sanitize(db_user.username, 32) if db_user.username else "—"
 
     return (
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "  👤 <b>ПРОФИЛЬ</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"┣ 🆔 <b>ID:</b> <code>{db_user.telegram_id}</code>\n"
-        f"┣ 📛 <b>Username:</b> @{db_user.username or '—'}\n"
+        f"┣ 📛 <b>Username:</b> @{safe_uname}\n"
         f"┣ 📅 <b>Регистрация:</b> {db_user.created_at.strftime('%d.%m.%Y')}\n"
-        f"┣ 📊 <b>Тариф:</b> {plan_name}\n"
+        f"┣ 📊 <b>Тариф:</b> {sanitize(plan_name, 32)}\n"
         f"┣ 📈 <b>Сегодня:</b> {db_user.daily_requests_used}/{daily_limit}\n"
         f"┣ 📊 <b>Всего:</b> {db_user.total_requests} запросов\n"
         f"┗ 🎁 <b>Бонусы:</b> {db_user.referral_bonus_balance}"
@@ -421,15 +423,18 @@ async def cb_help_osint(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "help:subs")
 async def cb_help_subs(callback: CallbackQuery) -> None:
+    from metabot.configs import get_settings
+    settings = get_settings()
     text = (
         "💎 <b>О подписках</b>\n\n"
         "🆓 <b>Free</b> — 5 запросов/день\n"
         "💎 <b>Premium</b> — 50 запросов/день + OSINT\n"
-        "👑 <b>VIP</b> — 200 запросов/день + всё\n\n"
-        "Оплата:\n"
-        "┣ ⭐ Telegram Stars\n"
-        "┗ 💳 Банковская карта\n\n"
-        "Подписка активируется мгновенно."
+        "👑 <b>VIP</b> — 200 запросов/день + все инструменты\n\n"
+        "<b>Как оформить:</b>\n"
+        "1️⃣ Откройте «💎 Подписка» → «📋 Тарифы»\n"
+        "2️⃣ Выберите план → «📨 Оставить заявку»\n"
+        "3️⃣ Владелец рассмотрит и активирует подписку\n\n"
+        f"По вопросам оплаты: @{settings.support_contact}"
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
     await callback.answer()
@@ -451,11 +456,14 @@ async def cb_help_referrals(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "help:support")
 async def cb_help_support(callback: CallbackQuery) -> None:
+    from metabot.configs import get_settings
+    settings = get_settings()
     text = (
         "💬 <b>Поддержка</b>\n\n"
         "Если у вас есть вопросы или проблемы,\n"
         "свяжитесь с нами:\n\n"
-        "📩 @vexis_support\n"
+        f"📩 @{settings.support_contact}\n\n"
+        "🔒 Ваша безопасность — наш приоритет."
     )
     await callback.message.edit_text(text, reply_markup=help_back_kb(), parse_mode="HTML")
     await callback.answer()
