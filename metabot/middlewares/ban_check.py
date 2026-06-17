@@ -20,7 +20,8 @@ class BanCheckMiddleware(BaseMiddleware):
     ) -> Any:
         db_user = data.get("db_user")
         if db_user and db_user.is_banned:
-            reason = db_user.ban_reason or "Не указана"
+            from html import escape as _esc
+            reason = _esc(db_user.ban_reason or "Не указана")
             if isinstance(event, Message):
                 await event.answer(
                     f"🚫 Ваш аккаунт заблокирован.\nПричина: {reason}"
