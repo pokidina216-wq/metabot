@@ -1,5 +1,9 @@
 """
 Middleware anti-flood + rate limiting через Redis.
+
+Стоит ПЕРВЫМ в цепочке (до Database/Auth) чтобы спам не создавал
+лишнюю нагрузку на БД. При недоступности Redis — пропускаем (fail-open),
+т.к. лучше пропустить запрос, чем сломать бота.
 """
 from __future__ import annotations
 
@@ -32,30 +36,31 @@ class ThrottleMiddleware(BaseMiddleware):
         if not user_id:
             return await handler(event, data)
 
-        redis = await get_redis()
-        cache = RedisCache(redis)
+        try:
+            redis = await get_redis()
+            cache = RedisCache(redis)
 
-        # Anti-flood
-        if not await cache.flood_check(user_id):
-            logger.debug("Flood detected: user=%d", user_id)
-            return  # Тихо игнорируем
+            # Anti-flood
+            if not await cache.flood_check(user_id):
+                logger.debug("Flood detected: user=%d", user_id)
+                return  # Тихо игнорируем
 
-        # Rate limit
-        settings = get_settings()
-        allowed, remaining = await cache.rate_limit_check(
-            user_id,
-            limit=settings.rate_limit_per_minute,
-            window_seconds=60,
-        )
-        if not allowed:
-            if isinstance(event, Message):
-                await event.answer(
-                    "⏳ Слишком много запросов. Подождите минуту.",
-                    show_alert=True if isinstance(event, CallbackQuery) else False,
-                )
-            elif isinstance(event, CallbackQuery):
-                await event.answer("⏳ Подождите минуту.", show_alert=True)
-            return
+            # Rate limit
+            settings = get_settings()
+            allowed, remaining = await cache.rate_limit_check(
+                user_id,
+                limit=settings.rate_limit_per_minute,
+                window_seconds=60,
+            )
+            if not allowed:
+                if isinstance(event, Message):
+                    await event.answer("⏳ Слишком много запросов. Подождите минуту.")
+                elif isinstance(event, CallbackQuery):
+                    await event.answer("⏳ Подождите минуту.", show_alert=True)
+                return
+        except Exception as exc:
+            # Redis недоступен — fail-open, пропускаем запрос
+            logger.warning("Throttle middleware Redis error (fail-open): %s", exc)
 
         return await handler(event, data)
 
