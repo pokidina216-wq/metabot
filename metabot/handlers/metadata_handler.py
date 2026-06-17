@@ -178,11 +178,13 @@ async def handle_document(
 
     except Exception as e:
         logger.exception("Metadata handler error: %s", e)
+        from html import escape as _esc
         await wait_msg.edit_text(
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "  ❌ <b>ОШИБКА АНАЛИЗА</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"<code>{str(e)[:200]}</code>",
+            "Не удалось обработать файл.\n"
+            "Попробуйте другой формат.",
             parse_mode="HTML",
             reply_markup=metadata_result_kb(),
         )
@@ -261,7 +263,10 @@ async def handle_video(
 
     except Exception as e:
         logger.exception("Video metadata error: %s", e)
-        await wait_msg.edit_text(f"❌ Ошибка: {str(e)[:200]}", parse_mode="HTML")
+        await wait_msg.edit_text(
+            "❌ Не удалось обработать видео. Попробуйте другой файл.",
+            reply_markup=metadata_result_kb(),
+        )
 
 
 @router.message(F.audio | F.voice)
@@ -309,4 +314,7 @@ async def handle_audio(
 
     except Exception as e:
         logger.exception("Audio metadata error: %s", e)
-        await wait_msg.edit_text(f"❌ Ошибка: {str(e)[:200]}", parse_mode="HTML")
+        await wait_msg.edit_text(
+            "❌ Не удалось обработать аудио. Попробуйте другой файл.",
+            reply_markup=metadata_result_kb(),
+        )
