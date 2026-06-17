@@ -1,5 +1,6 @@
 """
 Vexis — Глобальный обработчик ошибок.
+Безопасный: не раскрывает внутренние детали пользователю.
 """
 from __future__ import annotations
 
@@ -42,6 +43,6 @@ async def global_error_handler(event: ErrorEvent) -> bool:
                 show_alert=True,
             )
     except Exception as e:
-        logger.error("Failed to notify user: %s", e)
+        logger.error("Failed to notify user about error: %s", e)
 
     return True
