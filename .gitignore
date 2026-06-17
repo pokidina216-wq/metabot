@@ -1,6 +1,40 @@
-*.db
-*.db-journal
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment & secrets — НИКОГДА не коммитить
 .env
-/data/
+.env.*
+!.env.example
+.venv/
+venv/
+proxies.txt
+*.pem
+*.key
+nginx/ssl/*.pem
+nginx/ssl/*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
