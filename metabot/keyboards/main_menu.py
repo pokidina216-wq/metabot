@@ -5,27 +5,30 @@ Vexis — Reply-клавиатуры.
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
-def main_menu_kb() -> ReplyKeyboardMarkup:
-    """Главное меню — 8 кнопок, удобно для одной руки."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text="🔍 Проверка данных"),
-                KeyboardButton(text="📂 Метаданные"),
-            ],
-            [
-                KeyboardButton(text="🔤 Username Finder"),
-                KeyboardButton(text="👤 Профиль"),
-            ],
-            [
-                KeyboardButton(text="💎 Подписка"),
-                KeyboardButton(text="👥 Рефералы"),
-            ],
-            [
-                KeyboardButton(text="⚙️ Настройки"),
-                KeyboardButton(text="❓ Помощь"),
-            ],
+def main_menu_kb(*, is_owner: bool = False) -> ReplyKeyboardMarkup:
+    """Главное меню — 8 кнопок + Admin для владельца."""
+    rows = [
+        [
+            KeyboardButton(text="🔍 Проверка данных"),
+            KeyboardButton(text="📂 Метаданные"),
         ],
+        [
+            KeyboardButton(text="🔤 Username Finder"),
+            KeyboardButton(text="👤 Профиль"),
+        ],
+        [
+            KeyboardButton(text="💎 Подписка"),
+            KeyboardButton(text="👥 Рефералы"),
+        ],
+        [
+            KeyboardButton(text="⚙️ Настройки"),
+            KeyboardButton(text="❓ Помощь"),
+        ],
+    ]
+    if is_owner:
+        rows.append([KeyboardButton(text="🛠 Админ-панель")])
+    return ReplyKeyboardMarkup(
+        keyboard=rows,
         resize_keyboard=True,
         input_field_placeholder="Выберите действие 👇",
     )
