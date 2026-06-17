@@ -93,12 +93,13 @@ class User(TimestampMixin, Base):
         Boolean, default=True, server_default="true"
     )
 
-    # Отношения
+    # Отношения — lazy="noload" по умолчанию, чтобы не тянуть N+1 на каждый запрос.
+    # Загружайте явно через joinedload/selectinload когда нужны.
     subscriptions: Mapped[List["Subscription"]] = relationship(  # noqa: F821
-        back_populates="user", lazy="selectin"
+        back_populates="user", lazy="noload"
     )
     payments: Mapped[List["Payment"]] = relationship(  # noqa: F821
-        back_populates="user", lazy="selectin"
+        back_populates="user", lazy="noload"
     )
     request_logs: Mapped[List["RequestLog"]] = relationship(  # noqa: F821
         back_populates="user", lazy="noload"
