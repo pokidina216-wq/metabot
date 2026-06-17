@@ -270,65 +270,8 @@ async def cb_pending_requests(callback: CallbackQuery, session: AsyncSession, **
     await callback.answer()
 
 
-# ── Одобрение / Отклонение заявок ──────────────────────────
-
-@router.callback_query(F.data.startswith("req:approve:"))
-async def cb_approve_request(callback: CallbackQuery, session: AsyncSession, **data) -> None:
-    if not has_permission(data.get("effective_role", UserRole.USER), Permission.APPROVE_SUBSCRIPTION):
-        await callback.answer("🚫 Нет прав", show_alert=True)
-        return
-
-    req_id = int(callback.data.split(":")[2])
-    sub_service = SubscriptionService(session)
-    actor_tg = _actor_tg_id(data) or 0
-    try:
-        outcome, req = await sub_service.approve_request(req_id, owner_id=actor_tg)
-        if outcome != "approved":
-            await callback.answer(f"ℹ️ Статус: {outcome}", show_alert=True)
-            return
-        audit = SecurityAuditService(session)
-        await audit.record(
-            action="approve_subscription_request",
-            actor_tg_id=_actor_tg_id(data),
-            actor_user_id=_actor_id(data),
-            after={"request_id": req_id},
-        )
-        await callback.answer(f"✅ Заявка #{req_id} одобрена!", show_alert=True)
-    except Exception as e:
-        await callback.answer(f"⚠️ Ошибка: {str(e)[:100]}", show_alert=True)
-        return
-
-    # Обновляем список pending
-    await cb_pending_requests(callback, session, **data)
-
-
-@router.callback_query(F.data.startswith("req:reject:"))
-async def cb_reject_request(callback: CallbackQuery, session: AsyncSession, **data) -> None:
-    if not has_permission(data.get("effective_role", UserRole.USER), Permission.APPROVE_SUBSCRIPTION):
-        await callback.answer("🚫 Нет прав", show_alert=True)
-        return
-
-    req_id = int(callback.data.split(":")[2])
-    sub_service = SubscriptionService(session)
-    actor_tg = _actor_tg_id(data) or 0
-    try:
-        outcome, req = await sub_service.reject_request(req_id, owner_id=actor_tg)
-        if outcome != "rejected":
-            await callback.answer(f"ℹ️ Статус: {outcome}", show_alert=True)
-            return
-        audit = SecurityAuditService(session)
-        await audit.record(
-            action="reject_subscription_request",
-            actor_tg_id=_actor_tg_id(data),
-            actor_user_id=_actor_id(data),
-            after={"request_id": req_id},
-        )
-        await callback.answer(f"❌ Заявка #{req_id} отклонена.", show_alert=True)
-    except Exception as e:
-        await callback.answer(f"⚠️ Ошибка: {str(e)[:100]}", show_alert=True)
-        return
-
-    await cb_pending_requests(callback, session, **data)
+# ВАЖНО: req:approve / req:reject обрабатываются в payment_handler.py
+# (там же уведомление пользователю и полный аудит)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -358,7 +301,7 @@ async def cb_users_page(callback: CallbackQuery, session: AsyncSession, **data) 
         role_icon = {
             "owner": "👑", "admin": "🔑", "moderator": "🛡", "premium": "💎"
         }.get(u.role.value, "")
-        name = f"@{u.username}" if u.username else (u.first_name or "N/A")
+        name = f"@{sanitize(u.username, 32)}" if u.username else sanitize(u.first_name or "N/A", 32)
         lines.append(
             f"  {role_icon}{ban_icon} <code>{u.telegram_id}</code> — "
             f"{name} ({u.total_requests} запр.)"
@@ -425,7 +368,7 @@ async def process_admin_search(message: Message, state: FSMContext, session: Asy
         role = {"owner": "👑", "admin": "🔑", "moderator": "🛡"}.get(u.role.value, "")
         lines.append(
             f"  {role}{ban} <code>{u.telegram_id}</code> — "
-            f"@{u.username or 'N/A'} | {u.first_name or ''}\n"
+            f"@{sanitize(u.username or 'N/A', 32)} | {sanitize(u.first_name or '', 32)}\n"
             f"      Запросов: {u.total_requests} | Роль: {u.role.value}"
         )
 
@@ -596,7 +539,7 @@ async def process_ban_reason(
     )
 
     await message.answer(
-        f"🚫 Пользователь <code>{tg_id}</code> забанен.\nПричина: {reason or 'N/A'}",
+        f"🚫 Пользователь <code>{tg_id}</code> забанен.\nПричина: {sanitize(reason, 128) or 'N/A'}",
         reply_markup=_admin_dashboard_kb(),
         parse_mode="HTML",
     )
