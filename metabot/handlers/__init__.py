@@ -1,5 +1,14 @@
 """
 Регистрация всех роутеров.
+
+Порядок ВАЖЕН:
+1. error_router — перехватывает все исключения
+2. start_router — /start
+3. payment_router — req:approve/reject (до admin, чтобы уведомлял юзера)
+4. admin_router — /admin, admin:* (кроме req:approve/reject)
+5. osint_router — menu:osint callback
+6. menu_router — reply-кнопки главного меню + inline-навигация
+7. Остальные по порядку
 """
 from aiogram import Router
 
@@ -20,17 +29,16 @@ def setup_routers() -> Router:
     """Собрать все роутеры в один корневой."""
     root = Router(name="root")
 
-    # Порядок важен: admin → osint (menu:osint) → menu → остальные
     root.include_router(error_router)
     root.include_router(start_router)
+    root.include_router(payment_router)     # req:approve/reject ДО admin
     root.include_router(admin_router)
-    root.include_router(osint_router)      # menu:osint обрабатывается здесь
+    root.include_router(osint_router)
     root.include_router(menu_router)
     root.include_router(metadata_router)
     root.include_router(username_router)
     root.include_router(tg_info_router)
     root.include_router(profile_router)
     root.include_router(sub_router)
-    root.include_router(payment_router)
 
     return root
