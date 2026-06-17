@@ -59,6 +59,48 @@ async def handle_forwarded(
     )
 
 
+@router.message(F.forward_from_chat)
+async def handle_forwarded_chat(
+    message: Message, session: AsyncSession, db_user: User,
+) -> None:
+    """Пересланное из канала/группы (forward_from_chat)."""
+    user_service = UserService(session)
+    allowed, remaining = await user_service.check_and_increment(db_user)
+    if not allowed:
+        await message.answer("⚠️ Дневной лимит исчерпан! 💎 «Подписка»")
+        return
+
+    chat = message.forward_from_chat
+    lines = [
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "  🆔 <b>TELEGRAM INFO</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━\n",
+        f"┣ 📌 <b>Тип:</b> {'Канал' if chat.type == 'channel' else 'Группа'}",
+        f"┣ 🆔 <b>ID:</b> <code>{chat.id}</code>",
+        f"┣ 📛 <b>Название:</b> {chat.title or 'N/A'}",
+    ]
+    if chat.username:
+        lines.append(f"┣ 🔗 <b>Username:</b> @{chat.username}")
+    if getattr(chat, "description", None):
+        lines.append(f"┣ 📝 <b>Описание:</b> {chat.description[:200]}")
+    if getattr(chat, "member_count", None):
+        label = "Подписчиков" if chat.type == "channel" else "Участников"
+        lines.append(f"┣ 👥 <b>{label}:</b> {chat.member_count:,}")
+    if message.forward_from_message_id:
+        lines.append(f"┣ 💬 <b>Message ID:</b> {message.forward_from_message_id}")
+    lines.append(f"┗ 📊 <b>Осталось:</b> {remaining}")
+
+    log_repo = RequestLogRepository(session)
+    await log_repo.create(
+        user_id=db_user.id, action="telegram_info",
+        details=f"forwarded from chat {chat.id}",
+    )
+
+    await message.answer(
+        "\n".join(lines), parse_mode="HTML", reply_markup=tg_info_result_kb(),
+    )
+
+
 @router.message(F.forward_sender_name)
 async def handle_forwarded_hidden(message: Message) -> None:
     """Пересланное от пользователя со скрытым профилем."""
