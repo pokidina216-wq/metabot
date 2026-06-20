@@ -14,7 +14,11 @@ from enum import Enum
 from typing import List
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import (
+    TelegramBadRequest,
+    TelegramNetworkError,
+    TelegramRetryAfter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,14 +169,29 @@ class UsernameService:
 
     # ── Проверка доступности ───────────────────────────────
     async def _check_username(self, username: str) -> tuple[str, bool]:
-        """Проверить, свободен ли username через bot.get_chat."""
+        """Проверить, свободен ли username через bot.get_chat.
+
+        Audit-fix: раньше любой Exception считался «занят» — это
+        включало FloodWait и сетевые ошибки и давало ложные результаты.
+        Теперь FloodWait → ждём короткую паузу; network/прочее → не
+        обещаем пользователю «свободно» (возвращаем False).
+        """
         try:
             await self.bot.get_chat(f"@{username}")
             return username, False  # Занят
         except TelegramBadRequest:
             return username, True  # Свободен (чат не найден)
-        except Exception:
-            return username, False  # Ошибка → считаем занятым
+        except TelegramRetryAfter as e:
+            wait = getattr(e, "retry_after", 1) or 1
+            logger.warning("Telegram FloodWait %ss while checking @%s", wait, username)
+            await asyncio.sleep(min(int(wait), 5))
+            return username, False
+        except TelegramNetworkError as e:
+            logger.warning("Network error checking @%s: %s", username, e)
+            return username, False
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Unexpected error checking @%s: %s", username, e)
+            return username, False
 
     @staticmethod
     def _chunks(lst: list, n: int):
