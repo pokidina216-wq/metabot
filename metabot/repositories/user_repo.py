@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence
 
-from sqlalchemy import func, select, update
+from sqlalchemy import false, func, or_, select, update
 
 from metabot.models.user import User, UserRole
 from .base import BaseRepository
@@ -125,14 +125,29 @@ class UserRepository(BaseRepository[User]):
         offset: int = 0,
         limit: int = 20,
     ) -> Sequence[User]:
-        """Поиск по username, first_name или telegram_id."""
+        """Поиск по username, first_name или telegram_id.
+
+        Audit-fix: раньше выражение `User.telegram_id == int(query) if
+        query.isdigit() else False` подкладывало Python-литерал `False` в
+        WHERE-условие — это либо триггерило DeprecationWarning, либо
+        ломалось на свежих версиях SQLAlchemy. Теперь используем
+        `sa.false()` и оборачиваем int() в try, чтобы исключить
+        переполнения/мусор.
+        """
+        clauses = [
+            User.username.ilike(f"%{query}%"),
+            User.first_name.ilike(f"%{query}%"),
+            User.last_name.ilike(f"%{query}%"),
+        ]
+        try:
+            tg_id = int(query)
+        except (TypeError, ValueError):
+            tg_id = None
+        if tg_id is not None:
+            clauses.append(User.telegram_id == tg_id)
         stmt = (
             select(User)
-            .where(
-                (User.username.ilike(f"%{query}%"))
-                | (User.first_name.ilike(f"%{query}%"))
-                | (User.telegram_id == int(query) if query.isdigit() else False)
-            )
+            .where(or_(*clauses) if clauses else false())
             .offset(offset)
             .limit(limit)
             .order_by(User.created_at.desc())
