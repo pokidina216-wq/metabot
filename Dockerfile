@@ -16,14 +16,20 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 
-# ── Runtime ──────────────────────────────────────────────
+# ── Runtime ──────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 
-# Системные зависимости (ffprobe для видео-метаданных, libmagic для типов)
+# Системные зависимости:
+#   ffmpeg     — анализ видео/аудио-метаданных
+#   libmagic1  — определение MIME у файлов
+#   whois      — нужен пакету python-whois (он оборачивает CLI)
+#   ca-certificates — корневые сертификаты для HTTPS (audit-fix)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
         libmagic1 \
+        whois \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \
