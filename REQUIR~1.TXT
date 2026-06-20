@@ -1,0 +1,6 @@
+# Зависимости для тестов и CI (отдельно от продакшен-образа).
+-r requirements.txt
+pytest>=8.0
+pytest-asyncio>=0.24
+pgserver>=0.1.4
+ruff>=0.6

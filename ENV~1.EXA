@@ -1,0 +1,72 @@
+# ========================
+# Vexis — .env (ПРИМЕР)
+# ========================
+# Скопируй в .env и заполни. .env НИКОГДА не коммитится и не попадает в образ.
+# Сильные пароли можно сгенерировать: `openssl rand -base64 32`
+
+# --- Telegram ---
+BOT_TOKEN=PASTE_YOUR_BOT_TOKEN_FROM_BOTFATHER
+BOT_USERNAME=VexisBot
+
+# --- Owner (единственный владелец, защищён от понижения/бана) ---
+# Telegram ID владельца. Узнать: напиши @userinfobot.
+OWNER_ID=7221385215
+
+# --- PostgreSQL (для docker-compose / VPS) ---
+# На Railway это НЕ нужно — там задаётся DATABASE_URL автоматически плагином.
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=vexis
+POSTGRES_USER=vexis
+POSTGRES_PASSWORD=CHANGE_ME_STRONG_PASSWORD
+DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+
+# --- Redis ---
+# На Railway задаётся REDIS_URL автоматически плагином.
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=CHANGE_ME_STRONG_REDIS_PASSWORD
+REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0
+
+# --- Admins (legacy; роли будут управляться через RBAC на Этапе 2) ---
+# Telegram IDs через запятую
+ADMIN_IDS=7221385215
+
+# --- Payments ---
+# Ручная монетизация (Этап 1): автоплатежи отключены, заявки одобряет Owner.
+# Платёжные токены НЕ требуются — оставляй пустыми.
+PAYMENTS_PROVIDER_TOKEN=
+ENABLE_STARS_PAYMENT=false
+# Публичный контакт владельца для ручной оплаты/поддержки (без @).
+SUPPORT_CONTACT=VEXIShelper
+
+# --- Rate Limits ---
+RATE_LIMIT_PER_MINUTE=30
+RATE_LIMIT_BURST=5
+
+# --- OSINT API Keys (опционально) ---
+IPINFO_TOKEN=
+WHOIS_API_KEY=
+HUNTER_API_KEY=
+
+# --- Logging ---
+LOG_LEVEL=INFO
+# json — структурированные логи (прод/Railway); console — читаемые (dev)
+LOG_FORMAT=json
+LOG_FILE=logs/vexis.log
+
+# --- Health check (внутренний порт, наружу не публикуется) ---
+HEALTH_CHECK_ENABLED=true
+HEALTH_CHECK_PORT=8081
+
+# --- Webhook (опционально, для production за nginx) ---
+WEBHOOK_URL=
+WEBHOOK_PATH=/webhook
+WEBHOOK_SECRET=
+WEB_SERVER_HOST=0.0.0.0
+WEB_SERVER_PORT=8080
+
+# --- Backup ---
+BACKUP_ENABLED=true
+BACKUP_CRON=0 3 * * *
+BACKUP_DIR=/backups

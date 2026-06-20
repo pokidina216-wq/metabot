@@ -153,30 +153,25 @@ def create_dispatcher() -> Dispatcher:
     storage = RedisStorage.from_url(settings.redis_dsn)
     dp = Dispatcher(storage=storage)
 
-    # ─── Порядок middleware (снаружи → внутрь) ───────────────
-    # 1. Logging — замер времени, не требует БД
+    # Middlewares (порядок: снаружи → внутрь)
     dp.message.middleware(LoggingMiddleware())
     dp.callback_query.middleware(LoggingMiddleware())
 
-    # 2. Throttle — отсекаем спам ДО обращения к БД (экономия ресурсов)
-    dp.message.middleware(ThrottleMiddleware())
-    dp.callback_query.middleware(ThrottleMiddleware())
-
-    # 3. Database — сессия для хендлеров
     dp.message.middleware(DatabaseMiddleware())
     dp.callback_query.middleware(DatabaseMiddleware())
 
-    # 4. Auth — регистрация/обновление пользователя в БД
     dp.message.middleware(AuthMiddleware())
     dp.callback_query.middleware(AuthMiddleware())
 
-    # 5. BanCheck — блокировка забаненных (после Auth, т.к. нужен db_user)
     dp.message.middleware(BanCheckMiddleware())
     dp.callback_query.middleware(BanCheckMiddleware())
 
-    # 6. RBAC — вычисление effective_role, is_owner (после Auth)
+    # RBAC: вычисляет эффективную роль и флаг владельца (после Auth)
     dp.message.middleware(RBACMiddleware())
     dp.callback_query.middleware(RBACMiddleware())
+
+    dp.message.middleware(ThrottleMiddleware())
+    dp.callback_query.middleware(ThrottleMiddleware())
 
     # Роутеры
     root_router = setup_routers()
