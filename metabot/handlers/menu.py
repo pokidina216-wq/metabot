@@ -59,13 +59,13 @@ async def go_home_inline(callback: CallbackQuery, **data) -> None:
 
 @router.message(F.text == "🔍 Проверка данных")
 async def menu_osint(message: Message) -> None:
-    from metabot.handlers.osint_handler import osint_categories_kb
+    
     text = (
         "◈ <b>OSINT — Центр инструментов</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Выберите категорию данных для проверки:"
     )
-    await message.answer(text, reply_markup=osint_categories_kb(), parse_mode="HTML")
+    await message.answer(text, reply_markup=osint_menu_kb(), parse_mode="HTML")
 
 
 # ═══════════════════════════════════════════════════════════
