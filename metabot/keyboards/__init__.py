@@ -1,6 +1,7 @@
 from .main_menu import main_menu_kb, metadata_waiting_kb, back_to_main_kb
 from .inline import (
-    nav_home_kb,
+    nav_home_kb,    
+osint_menu_kb,
     osint_result_kb,
     metadata_result_kb,
     username_length_kb,
@@ -26,6 +27,7 @@ __all__ = [
     "metadata_waiting_kb",
     "back_to_main_kb",
     "nav_home_kb",
+        "osint_menu_kb",
     "osint_result_kb",
     "metadata_result_kb",
     "username_length_kb",
