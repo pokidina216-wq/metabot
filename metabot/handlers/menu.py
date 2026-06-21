@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from metabot.keyboards import (
     main_menu_kb,
+osint_menu_kb,
     metadata_waiting_kb,
     username_length_kb,
     profile_kb,
